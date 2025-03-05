@@ -12,6 +12,8 @@ A modern news viewing web application with an elegant interface and smooth anima
 ![Quart](https://img.shields.io/badge/Quart-latest-green.svg)
 ![News API](https://img.shields.io/badge/News%20API-v2-orange.svg)
 
+<img alt="Banner" src="https://cdn.glitch.global/33978bdf-b9d5-45db-af71-31ac740ffcfe/7e89494c-0fd7-4f17-b710-81b4bb43c0b9.image.png?v=1741178774111">
+
 ## ✨ Features
 
 - 🌊 Smooth news navigation with swipe gestures

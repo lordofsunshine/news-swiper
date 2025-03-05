@@ -1,0 +1,5 @@
+quart
+aiohttp
+python-dotenv
+newsapi-python
+colorama

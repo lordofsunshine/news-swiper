@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="{{ current_lang }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ translations.no_news if not articles else articles[0].title }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="language-switcher">
+        <button class="language-button" onclick="switchLanguage('{{ 'en' if current_lang == 'ru' else 'ru' }}')">
+            {{ translations.switch_language }}
+            <div class="language-icon">
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12.87 15.07l-2.54-2.51.03-.03c1.74-1.94 2.98-4.17 3.71-6.53H17V4h-7V2H8v2H1v1.99h11.17C11.5 7.92 10.44 9.75 9 11.35 8.07 10.32 7.3 9.19 6.69 8h-2c.73 1.63 1.73 3.17 2.98 4.56l-5.09 5.02L4 19l5-5 3.11 3.11.76-2.04zM18.5 10h-2L12 22h2l1.12-3h4.75L21 22h2l-4.5-12zm-2.62 7l1.62-4.33L19.12 17h-3.24z"/>
+                </svg>
+            </div>
+        </button>
+    </div>
+    <div class="container">
+        <div class="progress-bar">
+            <div class="progress"></div>
+        </div>
+        <div class="news-container">
+            {% if articles %}
+                {% for article in articles %}
+                <div class="news-card {% if loop.first %}active{% endif %}" data-url="{{ article.url }}">
+                    {% if article.urlToImage %}
+                    <div class="news-image" style="background-image: url('{{ article.urlToImage }}')"></div>
+                    {% else %}
+                    <div class="news-image default-icon-container">
+                        {{ article.default_icon | safe }}
+                    </div>
+                    {% endif %}
+                    <div class="news-content">
+                        <div style="width: 80%;">
+                            <div class="source">{{ article.source }}</div>
+                            <h2>{{ article.title }}</h2>
+                            <p>{{ article.description }}</p>
+                            <a href="{{ article.url }}" target="_blank" class="read-more">{{ translations.read_more }}</a>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="news-card active">
+                    <div class="news-content">
+                        <h2>{{ translations.no_news }}</h2>
+                        <p>{{ translations.check_connection }}</p>
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+        {% if articles|length > 1 %}
+        <div class="swipe-indicator">
+            {% for _ in articles %}
+            <div class="swipe-dot {% if loop.first %}active{% endif %}"></div>
+            {% endfor %}
+        </div>
+        {% endif %}
+    </div>
+    <div class="reload-prompt" style="display: none;">
+        <div class="reload-content">
+            <p>{{ translations.reload_prompt }}</p>
+            <button onclick="location.reload()">
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/>
+                </svg>
+                OK
+            </button>
+        </div>
+    </div>
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html> 

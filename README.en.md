@@ -27,7 +27,7 @@ A modern news viewing web application with an elegant interface and smooth anima
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/yourusername/news-swiper.git
+git clone https://github.com/lordofsunshine/news-swiper.git
 cd news-swiper
 ```
 

@@ -110,47 +110,70 @@ async def fetch_news(page=1, lang='ru'):
     global news_cache
     
     now = datetime.now()
-    if (not news_cache['last_update'].get(lang) or 
-        (now - news_cache['last_update'][lang]).seconds > 300 or 
-        page != news_cache['page'].get(lang, 1)):
+    try:
+        if (news_cache['articles'].get(lang) and 
+            news_cache['last_update'].get(lang) and 
+            (now - news_cache['last_update'][lang]).seconds <= 300 and 
+            page == news_cache['page'].get(lang, 1)):
+            logger.info(f"Возвращаем новости из кэша для языка {lang}")
+            return news_cache['articles'].get(lang, [])
         
-        try:
-            from_date = (now - timedelta(days=1)).strftime('%Y-%m-%d')
-            query = '(Russia OR USA OR World)' if lang == 'en' else '(Россия OR Russia)'
-            
-            news = newsapi.get_everything(
-                q=query,
-                language=lang,
-                from_param=from_date,
-                sort_by='publishedAt',
-                page=page,
-                page_size=10
-            )
-            
-            if news and news.get('articles'):
-                processed_articles = []
-                for article in news['articles']:
-                    if article['url'] not in news_cache['all_urls'][lang]:
-                        processed = process_article(article, lang)
-                        if processed:
-                            news_cache['all_urls'][lang].add(article['url'])
-                            processed_articles.append(processed)
-                
-                if not news_cache['articles'].get(lang):
-                    news_cache['articles'][lang] = []
-                    news_cache['page'][lang] = 1
-                    news_cache['last_update'][lang] = now
-                
-                news_cache['articles'][lang] = processed_articles
+        from_date = (now - timedelta(days=1)).strftime('%Y-%m-%d')
+        query = '(Russia OR USA OR World OR Europe)' if lang == 'en' else '(Россия OR Russia OR Мир)'
+        
+        news = newsapi.get_everything(
+            q=query,
+            language=lang,
+            from_param=from_date,
+            sort_by='publishedAt',
+            page=page,
+            page_size=15 
+        )
+        
+        if not news:
+            logger.error("API вернул пустой ответ")
+            return news_cache['articles'].get(lang, [])
+        
+        if news.get('status') != 'ok':
+            logger.error(f"API вернул ошибку: {news.get('message', 'Неизвестная ошибка')}")
+            return news_cache['articles'].get(lang, [])
+        
+        articles = news.get('articles', [])
+        if not articles:
+            logger.warning(f"API вернул пустой список статей для языка {lang}")
+            return news_cache['articles'].get(lang, [])
+        
+        processed_articles = []
+        for article in articles:
+            if article['url'] not in news_cache['all_urls'][lang]:
+                processed = process_article(article, lang)
+                if processed:
+                    news_cache['all_urls'][lang].add(article['url'])
+                    processed_articles.append(processed)
+        
+        if processed_articles:
+            if not news_cache['articles'].get(lang):
+                news_cache['articles'][lang] = []
+                news_cache['page'][lang] = 1
                 news_cache['last_update'][lang] = now
-                news_cache['page'][lang] = page
-                
-                logger.info(f"Загружено {len(processed_articles)} новых статей на языке {lang}")
-                
-        except Exception as e:
-            logger.error(f"Ошибка при загрузке новостей: {str(e)}")
-            if not news_cache['articles'].get(lang, []):
-                return []
+            
+            news_cache['articles'][lang] = processed_articles
+            news_cache['last_update'][lang] = now
+            news_cache['page'][lang] = page
+            
+            logger.info(f"Загружено {len(processed_articles)} новых статей на языке {lang}")
+        else:
+            logger.warning(f"Не удалось получить новые статьи для языка {lang}")
+            if news_cache['articles'].get(lang):
+                logger.info("Используем кэшированные статьи")
+                return news_cache['articles'][lang]
+        
+    except Exception as e:
+        logger.error(f"Ошибка при загрузке новостей: {str(e)}")
+        if news_cache['articles'].get(lang):
+            logger.info("Используем кэшированные статьи после ошибки")
+            return news_cache['articles'][lang]
+        return []
     
     return news_cache['articles'].get(lang, [])
 
@@ -159,11 +182,25 @@ async def index():
     try:
         lang = session.get('language', 'ru')
         viewed_articles = session.get('viewed_articles', [])
+        
+        if len(viewed_articles) > 100:
+            viewed_articles = viewed_articles[-50:] 
+            session['viewed_articles'] = viewed_articles
+        
         articles = await fetch_news(lang=lang)
         fresh_articles = [
             article for article in articles 
             if article['url'] not in viewed_articles
         ]
+        
+        if not fresh_articles and articles:
+            current_page = news_cache['page'].get(lang, 1)
+            articles = await fetch_news(page=current_page + 1, lang=lang)
+            fresh_articles = [
+                article for article in articles 
+                if article['url'] not in viewed_articles
+            ]
+        
         return await render_template('index.html', 
                                    articles=fresh_articles,
                                    translations=TRANSLATIONS[lang],

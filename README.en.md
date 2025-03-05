@@ -1,6 +1,6 @@
 # 📰 News Swiper
 
-<div align="right">
+<div>
 
 🇺🇸 English | [🇷🇺 Русский](README.md)
 

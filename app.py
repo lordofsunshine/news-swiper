@@ -7,6 +7,9 @@ from datetime import datetime, timedelta
 import json
 import random
 from colorama import init, Fore, Style
+import asyncio
+import aiohttp
+from functools import partial
 
 init()
 
@@ -176,6 +179,42 @@ async def fetch_news(page=1, lang='ru'):
         return []
     
     return news_cache['articles'].get(lang, [])
+
+async def refresh_news_api():
+    while True:
+        try:
+            logger.info("Начало планового обновления новостей")
+            
+            news_cache['articles'] = {}
+            news_cache['last_update'] = {}
+            news_cache['page'] = {}
+            news_cache['all_urls'] = {'en': set(), 'ru': set()}
+            
+            await fetch_news(lang='ru')
+            await fetch_news(lang='en')
+            
+            logger.info("Плановое обновление новостей завершено")
+            
+            await asyncio.sleep(1800)  # 30 минут = 1800 секунд
+            
+        except Exception as e:
+            logger.error(f"Ошибка при плановом обновлении новостей: {str(e)}")
+            await asyncio.sleep(60)  # При ошибке ждем минуту перед повторной попыткой
+
+@app.before_serving
+async def startup():
+    app.background_tasks = set()
+    task = asyncio.create_task(refresh_news_api())
+    app.background_tasks.add(task)
+    task.add_done_callback(app.background_tasks.discard)
+    logger.info("Запущена задача периодического обновления новостей")
+
+@app.after_serving
+async def cleanup():
+    for task in app.background_tasks:
+        task.cancel()
+    await asyncio.gather(*app.background_tasks, return_exceptions=True)
+    logger.info("Фоновые задачи остановлены")
 
 @app.route('/')
 async def index():
